@@ -1,0 +1,1015 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+<title>Photo Mode</title>
+
+<style>
+* {
+    box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
+}
+
+html, body {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    font-family:
+        -apple-system,
+        BlinkMacSystemFont,
+        "Pretendard",
+        "Noto Sans KR",
+        sans-serif;
+    background: #0b0d12;
+    color: white;
+}
+
+button,
+input,
+textarea {
+    font-family: inherit;
+}
+
+button {
+    border: 0;
+    cursor: pointer;
+}
+
+/* 전체 */
+.app {
+    width: 100%;
+    height: 100dvh;
+    position: relative;
+    overflow: hidden;
+}
+
+/* 사진 영역 */
+.photo-area {
+    position: absolute;
+    inset: 0;
+    background: #11151d;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.photo-area img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: none;
+}
+
+.no-photo {
+    text-align: center;
+    color: #9da3af;
+    padding: 30px;
+}
+
+.no-photo .icon {
+    font-size: 55px;
+    margin-bottom: 15px;
+}
+
+.no-photo p {
+    margin: 5px 0;
+}
+
+/* 어두운 오버레이 */
+.overlay {
+    position: absolute;
+    inset: 0;
+    background:
+        linear-gradient(
+            to bottom,
+            rgba(0,0,0,.55),
+            transparent 25%,
+            transparent 55%,
+            rgba(0,0,0,.75)
+        );
+    pointer-events: none;
+}
+
+/* 상단 */
+.top-bar {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    padding:
+        calc(env(safe-area-inset-top) + 14px)
+        18px
+        10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    z-index: 10;
+}
+
+.logo {
+    font-size: 21px;
+    font-weight: 700;
+}
+
+.top-buttons {
+    display: flex;
+    gap: 9px;
+}
+
+.icon-btn {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: rgba(20,24,32,.78);
+    color: white;
+    font-size: 21px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255,255,255,.1);
+}
+
+.icon-btn:active {
+    transform: scale(.93);
+}
+
+/* 문장 */
+.sentence-area {
+    position: absolute;
+    left: 20px;
+    right: 20px;
+    bottom: 145px;
+    z-index: 5;
+    text-align: center;
+    pointer-events: none;
+}
+
+.sentence {
+    display: inline-block;
+    max-width: 100%;
+    padding: 16px 22px;
+    border-radius: 18px;
+    background: rgba(0,0,0,.58);
+    backdrop-filter: blur(10px);
+    font-size: 25px;
+    line-height: 1.45;
+    font-weight: 700;
+    text-shadow: 0 2px 8px rgba(0,0,0,.7);
+    word-break: keep-all;
+}
+
+/* 하단 */
+.bottom-bar {
+    position: absolute;
+    left: 16px;
+    right: 16px;
+    bottom: calc(env(safe-area-inset-bottom) + 20px);
+    z-index: 10;
+    display: flex;
+    gap: 10px;
+}
+
+.main-btn {
+    flex: 1;
+    min-height: 58px;
+    border-radius: 18px;
+    background: rgba(255,255,255,.94);
+    color: #111;
+    font-size: 17px;
+    font-weight: 700;
+}
+
+.main-btn:active {
+    transform: scale(.97);
+}
+
+.next-btn {
+    width: 65px;
+    border-radius: 18px;
+    background: #5b7cff;
+    color: white;
+    font-size: 25px;
+}
+
+/* 설정 패널 */
+.settings {
+    position: absolute;
+    inset: 0;
+    z-index: 100;
+    background: rgba(0,0,0,.65);
+    backdrop-filter: blur(8px);
+    display: none;
+    align-items: flex-end;
+}
+
+.settings.open {
+    display: flex;
+}
+
+.panel {
+    width: 100%;
+    max-height: 88dvh;
+    overflow-y: auto;
+    background: #171a21;
+    border-radius: 25px 25px 0 0;
+    padding:
+        20px
+        20px
+        calc(env(safe-area-inset-bottom) + 25px);
+}
+
+.panel-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.panel-header h2 {
+    margin: 0;
+    font-size: 22px;
+}
+
+.close-btn {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: #292e38;
+    color: white;
+    font-size: 20px;
+}
+
+.section {
+    margin-bottom: 25px;
+}
+
+.section-title {
+    font-size: 14px;
+    color: #9da3af;
+    margin-bottom: 10px;
+}
+
+/* 사진 업로드 */
+.upload-btn {
+    width: 100%;
+    padding: 16px;
+    border-radius: 15px;
+    background: #2b3240;
+    color: white;
+    font-size: 16px;
+    font-weight: 600;
+}
+
+#photoInput {
+    display: none;
+}
+
+/* 문장 입력 */
+textarea {
+    width: 100%;
+    min-height: 110px;
+    resize: vertical;
+    border: 1px solid #363c48;
+    border-radius: 15px;
+    background: #0f1218;
+    color: white;
+    padding: 14px;
+    font-size: 16px;
+    outline: none;
+}
+
+textarea:focus {
+    border-color: #637dff;
+}
+
+.add-btn {
+    width: 100%;
+    margin-top: 9px;
+    padding: 15px;
+    border-radius: 14px;
+    background: #5b7cff;
+    color: white;
+    font-size: 16px;
+    font-weight: 700;
+}
+
+/* 문장 목록 */
+.sentence-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.sentence-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px;
+    border-radius: 13px;
+    background: #222731;
+}
+
+.sentence-text {
+    flex: 1;
+    font-size: 14px;
+    line-height: 1.4;
+}
+
+.delete-btn {
+    flex-shrink: 0;
+    width: 34px;
+    height: 34px;
+    border-radius: 9px;
+    background: #3a2025;
+    color: #ff6978;
+}
+
+/* 안내 */
+.help {
+    color: #8f96a3;
+    font-size: 13px;
+    line-height: 1.6;
+}
+
+/* 빈 목록 */
+.empty {
+    color: #777f8c;
+    text-align: center;
+    padding: 15px;
+}
+</style>
+</head>
+
+<body>
+
+<div class="app">
+
+    <!-- 사진 -->
+    <div class="photo-area" id="photoArea">
+
+        <img id="photo">
+
+        <div class="no-photo" id="noPhoto">
+            <div class="icon">📷</div>
+            <p>사진을 선택해주세요</p>
+            <p>아래 사진 버튼을 눌러 시작하세요</p>
+        </div>
+
+    </div>
+
+    <div class="overlay"></div>
+
+    <!-- 상단 -->
+    <div class="top-bar">
+
+        <div class="logo">
+            Photo Mode
+        </div>
+
+        <div class="top-buttons">
+
+            <button
+                class="icon-btn"
+                id="randomBtn"
+                type="button">
+                🔀
+            </button>
+
+            <button
+                class="icon-btn"
+                id="settingsBtn"
+                type="button">
+                ⚙️
+            </button>
+
+        </div>
+
+    </div>
+
+    <!-- 문장 -->
+    <div class="sentence-area">
+
+        <div class="sentence" id="sentence">
+            문장을 추가해주세요
+        </div>
+
+    </div>
+
+    <!-- 하단 -->
+    <div class="bottom-bar">
+
+        <button
+            class="main-btn"
+            id="photoBtn"
+            type="button">
+            📷 사진 선택
+        </button>
+
+        <button
+            class="main-btn next-btn"
+            id="nextBtn"
+            type="button">
+            →
+        </button>
+
+    </div>
+
+    <!-- 사진 파일 -->
+    <input
+        id="photoInput"
+        type="file"
+        accept="image/*">
+
+    <!-- 설정 -->
+    <div class="settings" id="settings">
+
+        <div class="panel">
+
+            <div class="panel-header">
+
+                <h2>⚙️ 설정</h2>
+
+                <button
+                    class="close-btn"
+                    id="closeSettings"
+                    type="button">
+                    ×
+                </button>
+
+            </div>
+
+            <!-- 사진 -->
+            <div class="section">
+
+                <div class="section-title">
+                    사진
+                </div>
+
+                <button
+                    class="upload-btn"
+                    id="uploadBtn"
+                    type="button">
+                    📷 사진 선택
+                </button>
+
+            </div>
+
+            <!-- 문장 추가 -->
+            <div class="section">
+
+                <div class="section-title">
+                    문장 추가
+                </div>
+
+                <textarea
+                    id="sentenceInput"
+                    placeholder="원하는 문장을 입력하세요.
+
+예:
+오늘도 예쁘다.
+사진 찍자.
+여기 한번 봐줘."></textarea>
+
+                <button
+                    class="add-btn"
+                    id="addBtn"
+                    type="button">
+                    ＋ 문장 추가
+                </button>
+
+            </div>
+
+            <!-- 문장 목록 -->
+            <div class="section">
+
+                <div class="section-title">
+                    저장된 문장
+                </div>
+
+                <div
+                    class="sentence-list"
+                    id="sentenceList">
+                </div>
+
+            </div>
+
+            <div class="help">
+                💡 문장은 이 기기의 브라우저에 저장됩니다.<br>
+                문장을 추가한 뒤 메인 화면에서 <b>→</b>를 누르면
+                다음 문장으로 넘어갑니다.
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+<script>
+
+/* =========================================
+   기본 문장
+========================================= */
+
+const defaultSentences = [
+    "오늘도 예쁘다.",
+    "한번 웃어봐.",
+    "여기 봐줘.",
+    "사진 찍을게.",
+    "조금만 더 가까이.",
+    "좋아, 딱 좋아."
+];
+
+
+/* =========================================
+   데이터 불러오기
+========================================= */
+
+let sentences;
+
+try {
+
+    const saved =
+        localStorage.getItem("photoModeSentences");
+
+    sentences = saved
+        ? JSON.parse(saved)
+        : defaultSentences.slice();
+
+    if (!Array.isArray(sentences)) {
+        sentences = defaultSentences.slice();
+    }
+
+} catch (error) {
+
+    sentences = defaultSentences.slice();
+
+}
+
+
+/* =========================================
+   현재 문장
+========================================= */
+
+let currentIndex = 0;
+
+
+/* =========================================
+   HTML 요소
+========================================= */
+
+const sentenceElement =
+    document.getElementById("sentence");
+
+const settings =
+    document.getElementById("settings");
+
+const settingsBtn =
+    document.getElementById("settingsBtn");
+
+const closeSettings =
+    document.getElementById("closeSettings");
+
+const addBtn =
+    document.getElementById("addBtn");
+
+const sentenceInput =
+    document.getElementById("sentenceInput");
+
+const sentenceList =
+    document.getElementById("sentenceList");
+
+const nextBtn =
+    document.getElementById("nextBtn");
+
+const randomBtn =
+    document.getElementById("randomBtn");
+
+const photoBtn =
+    document.getElementById("photoBtn");
+
+const uploadBtn =
+    document.getElementById("uploadBtn");
+
+const photoInput =
+    document.getElementById("photoInput");
+
+const photo =
+    document.getElementById("photo");
+
+const noPhoto =
+    document.getElementById("noPhoto");
+
+
+/* =========================================
+   문장 저장
+========================================= */
+
+function saveSentences() {
+
+    localStorage.setItem(
+        "photoModeSentences",
+        JSON.stringify(sentences)
+    );
+
+}
+
+
+/* =========================================
+   현재 문장 표시
+========================================= */
+
+function showSentence() {
+
+    if (sentences.length === 0) {
+
+        sentenceElement.textContent =
+            "문장을 추가해주세요";
+
+        return;
+    }
+
+    if (currentIndex >= sentences.length) {
+        currentIndex = 0;
+    }
+
+    sentenceElement.textContent =
+        sentences[currentIndex];
+
+}
+
+
+/* =========================================
+   다음 문장
+========================================= */
+
+function nextSentence() {
+
+    if (sentences.length === 0) {
+
+        sentenceElement.textContent =
+            "먼저 문장을 추가해주세요";
+
+        return;
+    }
+
+    currentIndex++;
+
+    if (currentIndex >= sentences.length) {
+        currentIndex = 0;
+    }
+
+    showSentence();
+
+}
+
+
+/* =========================================
+   랜덤 문장
+========================================= */
+
+function randomSentence() {
+
+    if (sentences.length === 0) {
+
+        sentenceElement.textContent =
+            "먼저 문장을 추가해주세요";
+
+        return;
+    }
+
+    if (sentences.length === 1) {
+        currentIndex = 0;
+    } else {
+
+        let newIndex;
+
+        do {
+
+            newIndex =
+                Math.floor(
+                    Math.random() * sentences.length
+                );
+
+        } while (newIndex === currentIndex);
+
+        currentIndex = newIndex;
+    }
+
+    showSentence();
+
+}
+
+
+/* =========================================
+   문장 목록 표시
+========================================= */
+
+function renderSentenceList() {
+
+    sentenceList.innerHTML = "";
+
+    if (sentences.length === 0) {
+
+        sentenceList.innerHTML =
+            '<div class="empty">저장된 문장이 없습니다.</div>';
+
+        return;
+    }
+
+    sentences.forEach((text, index) => {
+
+        const item =
+            document.createElement("div");
+
+        item.className =
+            "sentence-item";
+
+        const textElement =
+            document.createElement("div");
+
+        textElement.className =
+            "sentence-text";
+
+        textElement.textContent =
+            `${index + 1}. ${text}`;
+
+        const deleteButton =
+            document.createElement("button");
+
+        deleteButton.className =
+            "delete-btn";
+
+        deleteButton.type =
+            "button";
+
+        deleteButton.textContent =
+            "×";
+
+        /*
+         * 삭제
+         */
+        deleteButton.addEventListener(
+            "click",
+            function(event) {
+
+                event.stopPropagation();
+
+                sentences.splice(index, 1);
+
+                if (
+                    currentIndex >=
+                    sentences.length
+                ) {
+                    currentIndex = 0;
+                }
+
+                saveSentences();
+
+                renderSentenceList();
+
+                showSentence();
+
+            }
+        );
+
+        item.appendChild(textElement);
+        item.appendChild(deleteButton);
+
+        sentenceList.appendChild(item);
+
+    });
+
+}
+
+
+/* =========================================
+   설정 열기
+========================================= */
+
+function openSettings() {
+
+    settings.classList.add("open");
+
+}
+
+
+/* =========================================
+   설정 닫기
+========================================= */
+
+function closeSettingsPanel() {
+
+    settings.classList.remove("open");
+
+}
+
+
+/* =========================================
+   문장 추가
+========================================= */
+
+function addSentence() {
+
+    const text =
+        sentenceInput.value.trim();
+
+    if (!text) {
+
+        alert("문장을 입력해주세요.");
+
+        sentenceInput.focus();
+
+        return;
+    }
+
+    sentences.push(text);
+
+    saveSentences();
+
+    sentenceInput.value = "";
+
+    renderSentenceList();
+
+    currentIndex =
+        sentences.length - 1;
+
+    showSentence();
+
+}
+
+
+/* =========================================
+   사진 선택
+========================================= */
+
+function choosePhoto() {
+
+    photoInput.click();
+
+}
+
+
+/* =========================================
+   사진 불러오기
+========================================= */
+
+photoInput.addEventListener(
+    "change",
+    function() {
+
+        const file =
+            photoInput.files[0];
+
+        if (!file) {
+            return;
+        }
+
+        if (!file.type.startsWith("image/")) {
+
+            alert("이미지 파일을 선택해주세요.");
+
+            return;
+        }
+
+        const reader =
+            new FileReader();
+
+        reader.onload =
+            function(event) {
+
+                photo.src =
+                    event.target.result;
+
+                photo.style.display =
+                    "block";
+
+                noPhoto.style.display =
+                    "none";
+
+            };
+
+        reader.readAsDataURL(file);
+
+    }
+);
+
+
+/* =========================================
+   버튼 이벤트
+========================================= */
+
+settingsBtn.addEventListener(
+    "click",
+    openSettings
+);
+
+closeSettings.addEventListener(
+    "click",
+    closeSettingsPanel
+);
+
+addBtn.addEventListener(
+    "click",
+    addSentence
+);
+
+nextBtn.addEventListener(
+    "click",
+    nextSentence
+);
+
+randomBtn.addEventListener(
+    "click",
+    randomSentence
+);
+
+photoBtn.addEventListener(
+    "click",
+    choosePhoto
+);
+
+uploadBtn.addEventListener(
+    "click",
+    choosePhoto
+);
+
+
+/* =========================================
+   설정 바깥을 눌러 닫기
+========================================= */
+
+settings.addEventListener(
+    "click",
+    function(event) {
+
+        if (event.target === settings) {
+            closeSettingsPanel();
+        }
+
+    }
+);
+
+
+/* =========================================
+   화면을 클릭하면 다음 문장
+========================================= */
+
+document
+    .getElementById("photoArea")
+    .addEventListener(
+        "click",
+        function() {
+
+            nextSentence();
+
+        }
+    );
+
+
+/* =========================================
+   키보드 지원
+========================================= */
+
+document.addEventListener(
+    "keydown",
+    function(event) {
+
+        if (event.key === "ArrowRight" ||
+            event.key === " ") {
+
+            event.preventDefault();
+
+            nextSentence();
+
+        }
+
+        if (event.key === "Escape") {
+
+            closeSettingsPanel();
+
+        }
+
+    }
+);
+
+
+/* =========================================
+   시작
+========================================= */
+
+renderSentenceList();
+
+showSentence();
+
+</script>
+
+</body>
+</html>
