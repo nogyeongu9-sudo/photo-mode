@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="theme-color" content="#090909">
+<title>PHOTO MOOD</title>
+<style>
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;width:100%;height:100%;background:#090909;color:#fff;font-family:-apple-system,BlinkMacSystemFont,"Noto Sans KR",sans-serif;overflow:hidden}
+body{touch-action:none}
+#app{position:fixed;inset:0;overflow:hidden;touch-action:none;user-select:none}
+.slide{position:absolute;inset:0;background:#111 center/cover no-repeat;opacity:0;transition:opacity .45s ease;pointer-events:none}
+.slide.active{opacity:1}
+#tapArea{position:absolute;inset:0;z-index:5;touch-action:none}
+#shade{position:absolute;inset:0;z-index:6;pointer-events:none;background:linear-gradient(180deg,rgba(0,0,0,.2),transparent 45%,rgba(0,0,0,.8))}
+.top{position:absolute;z-index:10;top:env(safe-area-inset-top);left:0;right:0;padding:16px 18px;display:flex;justify-content:space-between;pointer-events:none}
+.logo{font-weight:800;letter-spacing:.5px}
+.gear{pointer-events:auto;border:0;background:rgba(0,0,0,.45);color:#fff;border-radius:50%;width:42px;height:42px;font-size:19px}
+.bottom{position:absolute;z-index:10;left:0;right:0;bottom:0;padding:30px 20px calc(env(safe-area-inset-bottom) + 24px);pointer-events:none}
+.phrase{font-size:clamp(27px,7.5vw,44px);font-weight:800;line-height:1.25;letter-spacing:-1.5px;text-shadow:0 3px 18px #000;min-height:1.3em}
+.counter{margin-top:10px;color:#ddd;font-size:12px}
+.nextBtn{margin-top:18px;width:100%;height:50px;border:0;border-radius:15px;background:#fff;color:#111;font-weight:800;font-size:15px;pointer-events:auto}
+#settings{position:absolute;z-index:30;inset:0;background:#0d0d0f;display:none;overflow:auto;touch-action:auto;padding:calc(env(safe-area-inset-top) + 18px) 18px calc(env(safe-area-inset-bottom) + 24px)}
+#settings.open{display:block}
+.head{display:flex;justify-content:space-between;align-items:center}.head h2{margin:0;font-size:23px}
+.close{border:0;background:#222;color:#fff;width:42px;height:42px;border-radius:12px;font-size:22px}
+.card{background:#17171a;border:1px solid #29292e;border-radius:18px;padding:16px;margin-top:14px}
+label{display:block;color:#aaa;font-size:13px;margin-bottom:9px}
+textarea{width:100%;height:230px;background:#0d0d0f;color:#fff;border:1px solid #333;border-radius:12px;padding:12px;font:15px/1.6 inherit;outline:none}
+input[type=range]{width:100%}
+.save{margin-top:14px;width:100%;height:50px;border:0;border-radius:14px;background:#fff;color:#111;font-weight:800}
+.file{display:block;background:#fff;color:#111;text-align:center;padding:14px;border-radius:13px;font-weight:800}
+.file input{display:none}
+#status{position:absolute;z-index:100;left:50%;top:50%;transform:translate(-50%,-50%);background:#fff;color:#111;padding:12px 16px;border-radius:20px;font-weight:800;opacity:0;transition:.2s;pointer-events:none}
+#status.show{opacity:1}
+</style>
+</head>
+<body>
+<div id="app">
+ <div id="a" class="slide active"></div><div id="b" class="slide"></div>
+ <div id="tapArea" aria-label="다음 사진"></div>
+ <div id="shade"></div>
+ <div class="top"><div class="logo">PHOTO MOOD</div><button id="gear" class="gear" type="button">⚙️</button></div>
+ <div class="bottom"><div id="phrase" class="phrase"></div><div id="counter" class="counter"></div><button id="nextBtn" class="nextBtn" type="button">다음 사진</button></div>
+ <div id="settings">
+   <div class="head"><h2>설정</h2><button id="close" class="close" type="button">×</button></div>
+   <div class="card"><label>내가 정한 문장</label><textarea id="phraseInput" placeholder="한 줄에 하나씩 입력하세요."></textarea></div>
+   <div class="card"><label>자동 전환 <span id="seconds">4</span>초</label><input id="speed" type="range" min="1" max="15" value="4"></div>
+   <div class="card"><label>사진 추가</label><label class="file">📷 사진 선택<input id="photoInput" type="file" accept="image/*" multiple></label></div>
+   <button id="save" class="save" type="button">저장하고 시작</button>
+ </div>
+ <div id="status"></div>
+</div>
+<script>
+(function(){
+"use strict";
+const photos=[
+"images/1.jpeg","images/2.jpeg","images/3.jpeg","images/4.jpeg","images/5.jpeg",
+"images/6.jpeg","images/7.jpeg","images/8.jpeg","images/9.jpeg","images/10.jpeg"
+];
+const defaults=["오늘도 예쁘다.","괜히 계속 보게 된다.","이 사진 분위기 진짜 좋다.","보고 있으면 기분이 좋아진다.","이 순간이 오래 남았으면 좋겠다."];
+let phrases=JSON.parse(localStorage.getItem("pm_phrases")||"null")||defaults.slice();
+let extra=JSON.parse(localStorage.getItem("pm_photos")||"[]");
+let all=photos.concat(extra), index=-1, layer=0, startX=0,startY=0,moved=false,timer=null;
+const $=id=>document.getElementById(id);
+function msg(t){$("status").textContent=t;$("status").classList.add("show");setTimeout(()=>$("status").classList.remove("show"),700)}
+function randomIndex(){
+ if(all.length===0)return -1;
+ if(all.length===1)return 0;
+ let n=index; while(n===index)n=Math.floor(Math.random()*all.length); return n;
+}
+function next(){
+ if($("settings").classList.contains("open"))return;
+ const n=randomIndex(); if(n<0)return;
+ index=n;
+ const current=layer===0?$("a"):$("b"), incoming=layer===0?$("b"):$("a");
+ incoming.style.backgroundImage='url("'+all[index]+'")';
+ incoming.classList.add("active"); current.classList.remove("active"); layer=layer?0:1;
+ $("phrase").textContent=phrases.length?phrases[Math.floor(Math.random()*phrases.length)]:"";
+ $("counter").textContent=(index+1)+" / "+all.length;
+}
+function prev(){
+ if(all.length<1)return;
+ index=(index-1+all.length)%all.length;
+ const current=layer===0?$("a"):$("b"),incoming=layer===0?$("b"):$("a");
+ incoming.style.backgroundImage='url("'+all[index]+'")';incoming.classList.add("active");current.classList.remove("active");layer=layer?0:1;
+ $("phrase").textContent=phrases[Math.floor(Math.random()*phrases.length)]||"";
+ $("counter").textContent=(index+1)+" / "+all.length;
+}
+function restart(){clearInterval(timer);timer=setInterval(next,Number($("speed").value)*1000)}
+function openSettings(){
+ clearInterval(timer); $("phraseInput").value=phrases.join("\n"); $("speed").value=localStorage.getItem("pm_speed")||4; $("seconds").textContent=$("speed").value;
+ $("settings").classList.add("open");
+}
+function closeSettings(){ $("settings").classList.remove("open"); restart(); }
+$("speed").addEventListener("input",()=>{$("seconds").textContent=$("speed").value});
+$("gear").addEventListener("click",e=>{e.stopPropagation();openSettings()});
+$("close").addEventListener("click",e=>{e.stopPropagation();closeSettings()});
+$("nextBtn").addEventListener("click",e=>{e.stopPropagation();next()});
+$("save").addEventListener("click",e=>{
+ e.stopPropagation();
+ phrases=$("phraseInput").value.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
+ if(!phrases.length)phrases=[""];
+ localStorage.setItem("pm_phrases",JSON.stringify(phrases));
+ localStorage.setItem("pm_speed",$("speed").value);
+ closeSettings(); next(); msg("저장 완료");
+});
+$("photoInput").addEventListener("change",async e=>{
+ const files=[...e.target.files], out=[];
+ for(const f of files){
+   if(!f.type.startsWith("image/"))continue;
+   out.push(await new Promise(res=>{const r=new FileReader();r.onload=()=>res(r.result);r.readAsDataURL(f)}));
+ }
+ extra=extra.concat(out); localStorage.setItem("pm_photos",JSON.stringify(extra));all=photos.concat(extra);msg(out.length+"장 추가");
+});
+$("tapArea").addEventListener("pointerdown",e=>{
+ if(e.isPrimary===false)return;
+ e.preventDefault(); startX=e.clientX; startY=e.clientY; moved=false;
+});
+$("tapArea").addEventListener("pointerup",e=>{
+ if(e.isPrimary===false)return;
+ e.preventDefault();
+ const dx=e.clientX-startX,dy=e.clientY-startY;
+ if(Math.abs(dx)>45 && Math.abs(dx)>Math.abs(dy)){dx<0?next():prev();moved=true;return}
+ if(!moved)next();
+});
+$("tapArea").addEventListener("pointercancel",()=>{moved=true});
+document.addEventListener("keydown",e=>{if(e.key==="ArrowRight"||e.key===" ")next();if(e.key==="ArrowLeft")prev();if(e.key==="Escape")closeSettings()});
+$("a").style.backgroundImage='url("'+photos[0]+'")'; index=0; $("phrase").textContent=phrases[Math.floor(Math.random()*phrases.length)]||""; $("counter").textContent="1 / "+all.length; restart();
+})();
+</script>
+</body>
+</html>
